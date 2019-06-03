@@ -4,6 +4,7 @@ import sys
 import urllib
 import argparse
 import os.path
+import re
 
 from html.parser import HTMLParser
 from google.cloud import texttospeech
@@ -69,6 +70,12 @@ class FetchForcast:
 
         self._stateKey = switcher.get(state, "Nicht unterstütztes Bundesland")
 
+    def clean_text(rgx_list, text):
+        new_text = text
+        for rgx_match in rgx_list:
+            new_text = re.sub(rgx_match, '', new_text)
+        return new_text
+
     def fetch_text(self, url):
         resp = urllib.request.urlopen(url)
         s = resp.read().decode('latin-1')
@@ -94,17 +101,31 @@ class FetchForcast:
                 continue
 
             # Unerwünschte Sektionsüberschriften:
-            if 'FROST:' in line:
+            if ':' in line:
                 # Die Überschrift will ich nicht, aber eine Pause
-                line = '<break time="0.5s"/> '
+                line = '<break time="0.5s"/>'
 
-            if 'STARKREGEN:' in line:
-                # Die Überschrift will ich nicht, aber eine Pause
-                line = '<break time="0.5s"/> '
+                # folgende Keywords wurden beobachtet:
+                #   "STURM / WIND:"
+                #   "HITZE:"
+                #   "UNWETTER / GEWITTER / STARKREGEN / STURM:"
+                #   "FROST:"
+                #   "STARKREGEN:"
+
 
             # Einheiten ändern
             if 'l/qm' in line:
                 line = line.replace('l/qm', 'Liter pro Quadratmeter')
+
+            # Komplexere Nachbearbeitung:
+            # rausfiltern von eingeklammerten Windgeschwindigkeiten (Bft 8-10)
+            line = re.sub(r"\(Bft\s\d+(-\d+)?\)", "", line)
+
+            # längere Wartezeiten bei Kommas:
+            line = re.sub(',', ',<break time="0.3s"/>', line)
+
+            # Sprachfehlerkorrektur:
+            line = re.sub('Landesteilen', 'Landes-Teilen', line)
 
             newLines.append(line)
 
@@ -120,14 +141,18 @@ class FetchForcast:
         allLines.append("<p>\r\n")
 
         lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL54_DW{0}_LATEST_html'.format(self._stateKey));
+
+#        allLines.append('Die Wetterlage:<break time="0.5s"/>\r\n')
         for line in lines:
             allLines.append(line + "\r\n")
 
         allLines.append("</p>\r\n")
 
         # Wetter Morgen
-        allLines.append('<break time="0.3s"/>\r\n<p>\r\n')
+        allLines.append('<break time="1.5s"/>\r\n')
+        allLines.append('Die Aussichten für morgen.<break time="0.5s"/>\r\n')
 
+        allLines.append('<p>\r\n')
         lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL50_DW{0}_LATEST_html'.format(self._stateKey));
         for line in lines:
             allLines.append(line + "\r\n")
@@ -135,7 +160,7 @@ class FetchForcast:
         allLines.append("</p>\r\n")
 
         # Wetter Übermorgen
-        allLines.append('<break time="0.3s"/>\r\n<p>\r\n')
+        allLines.append('<break time="1.5s"/>\r\n<p>\r\n')
 
         lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL51_DW{0}_LATEST_html'.format(self._stateKey));
         for line in lines:
@@ -168,15 +193,15 @@ class TextToSpeech:
         synthesis_input = texttospeech.types.SynthesisInput(ssml=text)
 
         if (self._useWaveNet):
-            voice = "de-DE-Wavenet-B"
+            voice = "de-DE-Wavenet-A"
         else:
-            voice = "de-DE-Standard-B"
+            voice = "de-DE-Standard-A"
 
         # Build the voice request, select the language code ("en-US") and the ssml
         # voice gender ("neutral")
         voice = texttospeech.types.VoiceSelectionParams(
             language_code='de',
-            name=voice #,ssml_gender=texttospeech.enums.SsmlVoiceGender.MALE
+            name=voice #,ssml_gender=texttospeech.enums.SsmlVoiceGender.MALE # .MALE
         )
 
         # Select the type of audio file you want returned
@@ -235,7 +260,9 @@ def main():
     tts.text_to_speech(ssml, args.output);
 
 # Prerequisites:
+# sudo apt-get install python3-setuptools
 # pip install --upgrade google-cloud-texttospeech
+# pip install --upgrade --user google-cloud-texttospeech
 
 if __name__ == "__main__":
     main()
