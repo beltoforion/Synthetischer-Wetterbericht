@@ -126,6 +126,7 @@ class FetchForcast:
 
             # Sprachfehlerkorrektur:
             line = re.sub('Landesteilen', 'Landes-Teilen', line)
+            line = re.sub('Südost', 'Süd Ost', line)
 
             newLines.append(line)
 
@@ -150,7 +151,7 @@ class FetchForcast:
 
         # Wetter Morgen
         allLines.append('<break time="1.5s"/>\r\n')
-        allLines.append('Die Aussichten für morgen.<break time="0.5s"/>\r\n')
+        allLines.append('<s>Die Aussichten für heute.</s><break time="0.5s"/>\r\n')
 
         allLines.append('<p>\r\n')
         lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL50_DW{0}_LATEST_html'.format(self._stateKey));
@@ -161,6 +162,7 @@ class FetchForcast:
 
         # Wetter Übermorgen
         allLines.append('<break time="1.5s"/>\r\n<p>\r\n')
+        allLines.append('<s>Die Aussichten für morgen.</s><break time="0.5s"/>\r\n')
 
         lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL51_DW{0}_LATEST_html'.format(self._stateKey));
         for line in lines:
