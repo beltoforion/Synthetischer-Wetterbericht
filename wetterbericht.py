@@ -128,6 +128,12 @@ class FetchForcast:
             # rausfiltern von eingeklammerten Windgeschwindigkeiten (Bft 8-10)
             line = re.sub(r"\(Bft\s\d+(-\d+)?\)", "", line)
 
+            # Textfehler / Wortwiederholungen filtern.
+            # Beobachtete Beispiele:
+            # "Ausbildung einiger Quellwolken. Trocken. Trocken. Maxima zwischen 25 und"
+            # https://regex101.com/r/Th8X46/1
+            line = re.sub(r"\b([a-zA-Z0-9\.!]+)\s+\1", r"\1", line)
+
             # längere Wartezeiten bei Kommas:
             line = re.sub(',', ',<break time="0.3s"/>', line)
 
@@ -205,9 +211,9 @@ class TextToSpeech:
         synthesis_input = texttospeech.types.SynthesisInput(ssml=text)
 
         if (self._useWaveNet):
-            voice = "de-DE-Wavenet-A"
+            voice = "de-DE-Wavenet-B"
         else:
-            voice = "de-DE-Standard-A"
+            voice = "de-DE-Standard-B"
 
         # Build the voice request, select the language code ("en-US") and the ssml
         # voice gender ("neutral")
@@ -219,7 +225,7 @@ class TextToSpeech:
         # Select the type of audio file you want returned
         # https://cloud.google.com/text-to-speech/docs/reference/rest/v1beta1/text/synthesize#VoiceSelectionParams
         audio_config = texttospeech.types.AudioConfig(
-            pitch=-1,
+            pitch=0,
             speaking_rate = 1,
             audio_encoding=texttospeech.enums.AudioEncoding.MP3)
 
