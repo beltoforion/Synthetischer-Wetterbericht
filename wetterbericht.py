@@ -46,7 +46,7 @@ class ForecastParser(HTMLParser):
 class FetchForcast:
     _stateKey = ""
 
-    def __init__(self, state: str):
+    def __init__(self, state: str, skip_warnings: bool):
         switcher = {
             "Sachsen": "LG",
             "Sachsen-Anhalt": "LH",
@@ -69,6 +69,7 @@ class FetchForcast:
         }
 
         self._stateKey = switcher.get(state, "Nicht unterstütztes Bundesland")
+        self._skip_warnings = skip_warnings
 
     def clean_text(rgx_list, text):
         new_text = text
@@ -91,19 +92,25 @@ class FetchForcast:
         for line in lines:
             line = line.strip()
 
+            if not line:
+                continue
+
             if 'LETZTE AKTUALISIERUNG' in line.upper():
                 continue
 
             if 'WARNRELEVANTE' in line.upper():
+#                line = '<!-- ' + line + '-->'
                 continue;
 
-            if not line:
-                continue
-
-            # Unerwünschte Sektionsüberschriften:
+            # Sektionen für Wetterwarnungen:
             if ':' in line:
+
+                if (self._skip_warnings):
+                    newLines.append('<!-- weather warnings skipped -->\r\n')
+                    break
+
                 # Die Überschrift will ich nicht, aber eine Pause
-                line = '<break time="0.5s"/>'
+                line = '<!-- ' + line + '-->\r\n<break time="0.5s"/>'
 
                 # folgende Keywords wurden beobachtet:
                 #   "STURM / WIND:"
@@ -139,6 +146,7 @@ class FetchForcast:
         allLines.append("<speak>\r\n")
 
         # Gesamtwetterlage
+        allLines.append('\r\n<!-- Gesamtwetterlage -->\r\n')
         allLines.append("<p>\r\n")
 
         lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL54_DW{0}_LATEST_html'.format(self._stateKey));
@@ -150,6 +158,7 @@ class FetchForcast:
         allLines.append("</p>\r\n")
 
         # Wetter Morgen
+        allLines.append('\r\n<!-- Aussichten für heute -->\r\n')
         allLines.append('<break time="1.5s"/>\r\n')
         allLines.append('<s>Die Aussichten für heute.</s><break time="0.5s"/>\r\n')
 
@@ -160,7 +169,8 @@ class FetchForcast:
 
         allLines.append("</p>\r\n")
 
-        # Wetter Übermorgen
+        # Wetter morgen
+        allLines.append('\r\n<!-- Aussichten für morgen -->\r\n')
         allLines.append('<break time="1.5s"/>\r\n<p>\r\n')
         allLines.append('<s>Die Aussichten für morgen.</s><break time="0.5s"/>\r\n')
 
@@ -229,6 +239,8 @@ def main():
     parser.add_argument("-s", "--State", dest="state",help='Bundesland', default='Sachsen', choices=[u'Sachsen', u'Sachsen-Anhalt', u'Thüringen', u'Berlin', u'Mecklenburg-Vorpomern', u'Brandenburg', u'Niedersachsen', u'Bremen', u'Hamburg', u'Rheinland-Pfalz', u'Bayern', u'Hessen', u'Saarland', u'Baden-Würtenberg', u'Schleswig-Holstein', u'Nordrhein-Westfalen'])
     parser.add_argument("-k", "--Keyfile", dest="key_file", help='Pfad zu der json Datei mit dem Key für das google text-to-speech api', required=True)
     parser.add_argument("-wave", "--UseWaveNet", dest="use_wave_net", help='Wenn dieses flag gesetzt ist wird sprache hoher qualität ausgegeben.', required=False, default=False, action='store_true')
+    parser.add_argument("-nowarn", "--NoWarnings", dest="skip_warnings", help='Ignoriere die Abschnitte zu Warnrelevanten Wettermeldungen.', required=False, default=False, action='store_true')
+
     args = parser.parse_args()
 
     if (not os.path.exists(args.key_file)):
@@ -248,8 +260,13 @@ def main():
     else:
         print(' - Verwende reduzierte Qualität für Sprachausgabe')
 
+    if (args.skip_warnings):
+        print(' - Abschnitte zu Warnrelevanten Wetterlagen werden ignoriert')
+    else:
+        print(' - Kompletter Wetterbericht inklusive warnrelevanter Wetterlagen')
+
     # Wetterbericht vom DWD abholen
-    ff = FetchForcast(args.state)
+    ff = FetchForcast(args.state, args.skip_warnings)
     ssml = ff.fetch()
 
     print('\r\nErzeugter Wetterbericht (ssml-Textversion)')
