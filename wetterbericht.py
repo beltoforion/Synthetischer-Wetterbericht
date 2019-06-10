@@ -139,7 +139,15 @@ class FetchForcast:
 
             # Sprachfehlerkorrektur:
             line = re.sub('Landesteilen', 'Landes-Teilen', line)
+            line = re.sub('Landesteile', 'Landes Teile', line)
             line = re.sub('Südost', 'Süd Ost', line)
+
+            # Wortsubstitutionen
+            if 'Minima' in line and 'Grad' in line:
+                line = re.sub('Minima', 'Tiefsttemperaturen', line)
+
+            if 'Maxima' in line and 'Grad' in line:
+                line = re.sub('Maxima', 'Höchsttemperaturen', line)
 
             newLines.append(line)
 
@@ -165,7 +173,7 @@ class FetchForcast:
 
         # Wetter Morgen
         allLines.append('\r\n<!-- Aussichten für heute -->\r\n')
-        allLines.append('<break time="1.5s"/>\r\n')
+        allLines.append('<break time="1.2s"/>\r\n')
         allLines.append('<s>Die Aussichten für heute.</s><break time="0.5s"/>\r\n')
 
         allLines.append('<p>\r\n')
@@ -177,7 +185,7 @@ class FetchForcast:
 
         # Wetter morgen
         allLines.append('\r\n<!-- Aussichten für morgen -->\r\n')
-        allLines.append('<break time="1.5s"/>\r\n<p>\r\n')
+        allLines.append('<break time="1.2s"/>\r\n<p>\r\n')
         allLines.append('<s>Die Aussichten für morgen.</s><break time="0.5s"/>\r\n')
 
         lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL51_DW{0}_LATEST_html'.format(self._stateKey));
@@ -225,7 +233,7 @@ class TextToSpeech:
         # Select the type of audio file you want returned
         # https://cloud.google.com/text-to-speech/docs/reference/rest/v1beta1/text/synthesize#VoiceSelectionParams
         audio_config = texttospeech.types.AudioConfig(
-            pitch=0,
+            pitch=-1,
             speaking_rate = 1,
             audio_encoding=texttospeech.enums.AudioEncoding.MP3)
 
