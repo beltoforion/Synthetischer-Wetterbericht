@@ -1,4 +1,4 @@
 *.json
 venv/
 .idea/*
-output.mp3
+*.mp3
