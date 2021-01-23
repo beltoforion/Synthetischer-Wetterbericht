@@ -216,7 +216,7 @@ class TextToSpeech:
         client = texttospeech.TextToSpeechClient(credentials=credentials)
 
         # Set the text input to be synthesized
-        synthesis_input = texttospeech.types.SynthesisInput(ssml=text)
+        synthesis_input = texttospeech.SynthesisInput(ssml=text)
 
         if (self._useWaveNet):
             voice = "de-DE-Wavenet-B"
@@ -225,21 +225,21 @@ class TextToSpeech:
 
         # Build the voice request, select the language code ("en-US") and the ssml
         # voice gender ("neutral")
-        voice = texttospeech.types.VoiceSelectionParams(
+        voice = texttospeech.VoiceSelectionParams(
             language_code='de',
             name=voice #,ssml_gender=texttospeech.enums.SsmlVoiceGender.MALE # .MALE
         )
 
         # Select the type of audio file you want returned
         # https://cloud.google.com/text-to-speech/docs/reference/rest/v1beta1/text/synthesize#VoiceSelectionParams
-        audio_config = texttospeech.types.AudioConfig(
+        audio_config = texttospeech.AudioConfig(
             pitch=-1,
             speaking_rate = 1,
-            audio_encoding=texttospeech.enums.AudioEncoding.MP3)
+            audio_encoding=texttospeech.AudioEncoding.MP3)
 
         # Perform the text-to-speech request on the text input with the selected
         # voice parameters and audio file type
-        response = client.synthesize_speech(synthesis_input, voice, audio_config)
+        response = client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
 
         # The response's audio_content is binary.
         with open(file_name, 'wb') as out:
