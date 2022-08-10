@@ -3,4 +3,4 @@ Ein Python-Skript für das automatisierte Erstellen von gesprochenen Wetterberic
 Textvorhersagen des deutschen Wetterdienstes.
 
 Beschreibung und weitere Informationen befinden sich auf der Webseite des Projektes:
-https://beltoforion.de/article.php?a=wetterbericht
+* https://beltoforion.de/de/wetterbericht
