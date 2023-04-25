@@ -12,7 +12,7 @@ from google.oauth2 import service_account
 
 
 class ForecastParser(HTMLParser):
-    _text = "";
+    _text = ""
     _lastTag = ""
 
     def __init__(self):
@@ -20,23 +20,23 @@ class ForecastParser(HTMLParser):
         pass
 
     def handle_starttag(self, tag, attrs):
-        self._lastTag = tag;
+        self._lastTag = tag
 
     def handle_endtag(self, tag):
         if self._lastTag == "strong":
             self._text += '<break time="0.4s"/>'
 
-        self._lastTag = "";
+        self._lastTag = ""
 
 
     def handle_data(self, data):
         if not data:
-            return;
+            return
 
         if not self._lastTag:
-            return;
+            return
 
-        self._text += data;
+        self._text += data
 
 
     def clear(self):
@@ -88,7 +88,7 @@ class FetchForcast:
         lines = parser._text.splitlines()
 
         # Meta zeugs rausfiltern
-        newLines = [];
+        newLines = []
         for line in lines:
             line = line.strip()
 
@@ -151,21 +151,20 @@ class FetchForcast:
 
             newLines.append(line)
 
-        return newLines;
+        return newLines
 
     def fetch(self) -> str:
-        parser = ForecastParser()
+#        parser = ForecastParser()
 
-        allLines = [];
+        allLines = []
         allLines.append("<speak>\r\n")
 
         # Gesamtwetterlage
         allLines.append('\r\n<!-- Gesamtwetterlage -->\r\n')
         allLines.append("<p>\r\n")
 
-        lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL54_DW{0}_LATEST_html'.format(self._stateKey));
+        lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL54_DW{0}_LATEST_html'.format(self._stateKey))
 
-#        allLines.append('Die Wetterlage:<break time="0.5s"/>\r\n')
         for line in lines:
             allLines.append(line + "\r\n")
 
@@ -188,7 +187,7 @@ class FetchForcast:
         allLines.append('<break time="1.2s"/>\r\n<p>\r\n')
         allLines.append('<s>Die Aussichten für morgen.</s><break time="0.4s"/>\r\n')
 
-        lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL51_DW{0}_LATEST_html'.format(self._stateKey));
+        lines = self.fetch_text('http://opendata.dwd.de/weather/text_forecasts/html/VHDL51_DW{0}_LATEST_html'.format(self._stateKey))
         for line in lines:
             allLines.append(line + "\r\n")
 
@@ -198,14 +197,14 @@ class FetchForcast:
 
         s = ""
         for line in allLines:
-            s += line;
+            s += line
 
         return s
 
 
 class TextToSpeech:
     _keyFile = ""
-    _useWaveNet = True;
+    _useWaveNet = True
 
     def __init__(self, keyfile: str, useWaveNet: bool):
         self._keyFile = keyfile
@@ -252,6 +251,7 @@ def main():
     parser.add_argument("-o", "--Output", dest="output",help='Name der Ausgabedatei', type=str, required=False, default='output.mp3')
     parser.add_argument("-s", "--State", dest="state",help='Bundesland', default='Sachsen', choices=[u'Sachsen', u'Sachsen-Anhalt', u'Thüringen', u'Berlin', u'Mecklenburg-Vorpomern', u'Brandenburg', u'Niedersachsen', u'Bremen', u'Hamburg', u'Rheinland-Pfalz', u'Bayern', u'Hessen', u'Saarland', u'Baden-Würtenberg', u'Schleswig-Holstein', u'Nordrhein-Westfalen'])
     parser.add_argument("-k", "--Keyfile", dest="key_file", help='Pfad zu der json Datei mit dem Key für das google text-to-speech api', required=True)
+    parser.add_argument("-t", "--TextOnly", dest="text_only", help='Wenn dieses Flag gesetzt ist wird nur eine ssml datei erstellt.', required=False, default=False, action='store_true')
     parser.add_argument("-wave", "--UseWaveNet", dest="use_wave_net", help='Wenn dieses flag gesetzt ist wird sprache hoher qualität ausgegeben.', required=False, default=False, action='store_true')
     parser.add_argument("-nowarn", "--NoWarnings", dest="skip_warnings", help='Ignoriere die Abschnitte zu Warnrelevanten Wettermeldungen.', required=False, default=False, action='store_true')
 
@@ -287,10 +287,14 @@ def main():
     print('------------------------------------------')
     print(ssml)
 
-
-    print('\r\nErzeuge Sprachversion...')
-    tts = TextToSpeech(args.key_file, args.use_wave_net)
-    tts.text_to_speech(ssml, args.output);
+    if (args.text_only):
+        text_filename = os.path.splitext(args.output)[0] + '.ssml'
+        with open(text_filename, 'w') as f:
+            f.write(ssml)
+    else:
+        print('\r\nErzeuge Sprachversion...')
+        tts = TextToSpeech(args.key_file, args.use_wave_net)
+        tts.text_to_speech(ssml, args.output);
 
 # Prerequisites:
 # sudo apt-get install python3-setuptools
